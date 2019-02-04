@@ -5,9 +5,12 @@ import java.util.List;
 import java.util.Optional;
 
 import com.expense.dao.ExpenseJpaRepository;
+import com.expense.dao.UserJpaRepository;
 import com.expense.dao.TestDao;
 import com.expense.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.expense.model.Expense;
@@ -19,6 +22,8 @@ public class ExpenseController {
     String[] expenseTypesArray = new String[]{"Grocery", "Cosmetics",
             "Medicine", "Stationary", "Crockery"};
     List<String> expenseTypes = Arrays.asList(expenseTypesArray);
+    @Autowired
+    private UserJpaRepository userJpaRepository;
     @Autowired
     private ExpenseJpaRepository expenseJpaRepository;
     @Autowired
@@ -38,19 +43,38 @@ public class ExpenseController {
 
     @GetMapping("/saveUser")
     public String saveUser() {
-        expenseJpaRepository.save(testDao.getUser1());
-        expenseJpaRepository.save(testDao.getUser2());
+        userJpaRepository.save(testDao.getUser1());
+        userJpaRepository.save(testDao.getUser2());
         return "success";
     }
+
     @GetMapping("/getUserExpenses/{id}")
-    public List<Expense> getUserExpenses(@PathVariable("id") String id){
-        Optional<User> user = expenseJpaRepository.findById(id);
+    public List<Expense> getUserExpenses(@PathVariable("id") String id) {
+        Optional<User> user = userJpaRepository.findById(id);
         System.out.println("...........................................................................................................");
-        List<Expense> expenses=null;
-        if(user.isPresent()){
-           User u= user.get();
-            expenses=u.getExpenses();
+        List<Expense> expenses = null;
+        if (user.isPresent()) {
+            User u = user.get();
+            expenses = u.getExpenses();
         }
         return expenses;
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Object> deleteExpenseByExpenseId(@PathVariable("id") int id) {
+        expenseJpaRepository.deleteById(id);
+        return new ResponseEntity<Object>(HttpStatus.OK);
+    }
+
+
+    @PostMapping("/add/{user_id}")
+    public ResponseEntity<Object> addExpense(@RequestBody Expense expense, @PathVariable("user_id") String userId) {
+        Optional<User> optionalUser = userJpaRepository.findById(userId);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            user.getExpenses().add(expense);
+            userJpaRepository.save(user);
+        }
+        return new ResponseEntity<Object>(HttpStatus.CREATED);
     }
 }
